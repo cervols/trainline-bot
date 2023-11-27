@@ -43,7 +43,8 @@ group :development, :test do
   gem "rspec-rails"
 end
 
-group :development do
+group :test do
+  gem "webmock"
 end
 
 gem "httparty", "~> 0.21.0"
