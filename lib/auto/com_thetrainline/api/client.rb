@@ -21,15 +21,15 @@ module ComThetrainline
           headers: headers
         )
 
-        raise BadResponse.new, "Bad response:\n#{response.inspect}" if error_response?
+        return response if response_successful?
 
-        response
+        raise BadResponse.new, "Bad response:\n#{response.inspect}"
       end
 
       private
 
-        def error_response?
-          response.code != 200
+        def response_successful?
+          response.code == 200
         end
 
         def headers

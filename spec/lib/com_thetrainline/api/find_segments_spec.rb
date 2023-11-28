@@ -1,6 +1,8 @@
 require 'rails_helper'
 
 RSpec.describe ComThetrainline::Api::FindSegments do
+  subject(:segments) { described_class.new(from, to, departure_at).segments }
+
   describe '#segments' do
     let(:from) { 'urn:trainline:eurostar:loc:8727100' }
     let(:to) { 'urn:trainline:eurostar:loc:7015400' }
@@ -32,17 +34,59 @@ RSpec.describe ComThetrainline::Api::FindSegments do
       }.to_json
     end
 
-    before do
-      allow_any_instance_of(ComThetrainline::Api::Client).to receive(:send_request)
-        .and_return(ComThetrainline::DummyResponse::Client)
-    end
+    context 'when there are no journeys in response' do
+      before do
+        allow_any_instance_of(ComThetrainline::Api::Client).to receive(:send_request)
+          .and_return(ComThetrainline::DummyResponse::Client)
+      end
 
-    describe '#segments' do
       it 'calls client' do
         expect(ComThetrainline::Api::Client).to receive(:new).with(body: expected_body, url: url).and_call_original
         expect_any_instance_of(ComThetrainline::Api::Client).to receive(:send_request)
 
-        described_class.new(from, to, departure_at).segments
+        segments
+      end
+
+      it 'returns not_found response' do
+        response = segments
+
+        expect(response.code).to eq(404)
+        expect(response.message).to eq(ComThetrainline::Api::FindSegments::NOT_FOUND_MESSAGE)
+      end
+    end
+
+    context 'when there are journeys in response' do
+      let(:departure_at) { '2023-12-01T07:01:00+00:00'.to_datetime }
+      let(:arrival_at) { '2023-12-01T10:21:00+01:00'.to_datetime }
+
+      let(:trainline_response) do
+        File.read(Rails.root.join('spec', 'support', 'files', 'journeys.json'))
+      end
+
+      it 'returns array with segments data' do
+        stub_request(:post, 'https://www.thetrainline.com/api/journey-search/')
+          .to_return(status: 200, body: trainline_response, headers: {})
+
+        expect(segments).to be_a(Array)
+        expect(segments.count).to eq(15)
+        expect(segments.first).to eq(
+          departure_station: 'London St-Pancras',
+          departure_at: departure_at,
+          arrival_station: 'Paris Gare du Nord',
+          arrival_at: arrival_at,
+          service_agencies: ['Eurostar'],
+          duration_in_minutes: 140,
+          changeovers: 1,
+          products: ['train'],
+          fares: [
+            {
+              price_in_cents: 16177,
+              currency: 'USD',
+              name: 'Standard',
+              comfort_class: 'Standard'
+            }
+          ]
+        )
       end
     end
   end

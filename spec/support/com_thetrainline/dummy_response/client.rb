@@ -2,7 +2,7 @@ module ComThetrainline
   module DummyResponse
     class Client
       def self.code
-        400
+        200
       end
 
       def self.body

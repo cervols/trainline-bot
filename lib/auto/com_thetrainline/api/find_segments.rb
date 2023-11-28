@@ -6,6 +6,7 @@ module ComThetrainline
       SEARCH_URL = 'https://www.thetrainline.com/api/journey-search/'
       DEFAULT_DATE_OF_BIRTH = '01/01/2000'
       DEFAULT_CURRENCY = 'USD'
+      NOT_FOUND_MESSAGE = 'Result is not found'
 
       def initialize(from, to, departure_at)
         @from = from
@@ -56,24 +57,21 @@ module ComThetrainline
         end
 
         def parse_response
-          return missing_data if missing_response?
+          return not_found_response if missing_data?
 
           correct_response
         end
 
-        def missing_response?
+        def missing_data?
           response.code == 200 && journeys.blank?
         end
 
-        def missing_data
-          {
-            code: '404',
-            message: 'Result is not found'
-          }
+        def not_found_response
+          Net::HTTPNotFound.new('', 404, NOT_FOUND_MESSAGE)
         end
 
         def response_body
-          @response_body ||= JSON.parse(response.body)['data'].with_indifferent_access
+          @response_body ||= Oj.load(response.body)['data'].with_indifferent_access
         end
 
         def correct_response
