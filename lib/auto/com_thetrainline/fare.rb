@@ -16,7 +16,7 @@ module ComThetrainline
       fare_leg = fare[:fareLegs].first
 
       {
-        price_in_cents: price_in_cents(price, currency),
+        price_in_cents: price_in_cents(price),
         currency: currency,
         name: fare_leg.dig(:travelClass, :name),
         comfort_class: fare_leg.dig(:comfort, :name)
@@ -29,13 +29,8 @@ module ComThetrainline
       alternatives[cheapest_alternative_id]
     end
 
-    def price_in_cents(price, currency)
-      case currency
-      when 'USD'
-        price * 100
-      else
-        0
-      end.to_i
+    def price_in_cents(price)
+      (price * 100).to_i
     end
   end
 end

@@ -5,7 +5,6 @@ module ComThetrainline
     class FindSegments
       SEARCH_URL = 'https://www.thetrainline.com/api/journey-search/'
       DEFAULT_DATE_OF_BIRTH = '01/01/2000'
-      DEFAULT_CURRENCY = 'USD'
       NOT_FOUND_MESSAGE = 'Result is not found'
 
       def initialize(from, to, departure_at)
@@ -49,8 +48,7 @@ module ComThetrainline
                 }
               }
             ],
-            type: 'single',
-            requestedCurrencyCode: DEFAULT_CURRENCY
+            type: 'single'
           }.to_json
         end
 

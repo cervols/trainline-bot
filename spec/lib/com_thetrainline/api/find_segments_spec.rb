@@ -9,7 +9,6 @@ RSpec.describe ComThetrainline::Api::FindSegments do
     let(:departure_at) { DateTime.now }
     let(:url) { ComThetrainline::Api::FindSegments::SEARCH_URL }
     let(:birth_date) { ComThetrainline::Api::FindSegments::DEFAULT_DATE_OF_BIRTH }
-    let(:currency) { ComThetrainline::Api::FindSegments::DEFAULT_CURRENCY }
 
     let(:expected_body) do
       {
@@ -29,8 +28,7 @@ RSpec.describe ComThetrainline::Api::FindSegments do
             }
           },
         ],
-        type: 'single',
-        requestedCurrencyCode: currency
+        type: 'single'
       }.to_json
     end
 
