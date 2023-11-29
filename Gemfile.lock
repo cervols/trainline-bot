@@ -81,6 +81,9 @@ GEM
     date (3.3.3)
     diff-lcs (1.5.0)
     erubi (1.12.0)
+    eu_central_bank (1.7.0)
+      money (~> 6.13, >= 6.13.6)
+      nokogiri (~> 1.9)
     globalid (1.2.1)
       activesupport (>= 6.1)
     hashdiff (1.0.1)
@@ -103,6 +106,8 @@ GEM
     method_source (1.0.0)
     mini_mime (1.1.5)
     minitest (5.20.0)
+    money (6.16.0)
+      i18n (>= 0.6.4, <= 2)
     msgpack (1.7.2)
     multi_xml (0.6.0)
     net-imap (0.4.3)
@@ -231,7 +236,9 @@ PLATFORMS
 
 DEPENDENCIES
   bootsnap
+  eu_central_bank
   httparty (~> 0.21.0)
+  money
   oj
   pg (~> 1.1)
   pry-byebug
