@@ -17,7 +17,7 @@ module ComThetrainline
     end
 
     def calculate_changeovers(node)
-      node[:legs].count
+      node[:legs].count - 1
     end
 
     def parse_departure_station(node, legs, locations)

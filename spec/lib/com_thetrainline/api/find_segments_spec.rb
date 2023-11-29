@@ -76,7 +76,7 @@ RSpec.describe ComThetrainline::Api::FindSegments do
           arrival_at: arrival_at,
           service_agencies: ['Eurostar'],
           duration_in_minutes: 140,
-          changeovers: 1,
+          changeovers: 0,
           products: ['train'],
           fares: [
             {
