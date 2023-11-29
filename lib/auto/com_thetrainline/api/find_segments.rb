@@ -21,9 +21,7 @@ module ComThetrainline
 
       private
 
-        attr_reader :from, :to, :departure_at, :client, :response, :response_body,
-          :journeys, :sections, :alternatives, :legs, :fares, :carriers, :locations,
-          :transport_modes
+        attr_reader :from, :to, :departure_at, :response
 
         def send_request
           @response = client.send_request
@@ -49,7 +47,7 @@ module ComThetrainline
                   time: departure_at,
                   type: 'departAfter'
                 }
-              },
+              }
             ],
             type: 'single',
             requestedCurrencyCode: DEFAULT_CURRENCY
@@ -75,64 +73,41 @@ module ComThetrainline
         end
 
         def correct_response
-          journeys.map do |journey|
-            result = {}
+          journeys.map do |journey_data|
+            journey_node = journey_data[1]
 
-            journey_data = journey[1]
-            journey_leg_ids = journey_data[:legs]
+            segment = Segment.parse(journey_node, legs, locations)
 
-            result[:changeovers] = journey_leg_ids.count
+            segment[:service_agencies] =
+              journey_node[:legs].map do |leg_id|
+                carrier_id = legs[leg_id][:carrier]
 
-            first_journey_leg_id = journey_leg_ids.first
-            departure_station_id = legs[first_journey_leg_id][:departureLocation]
-            result[:departure_station] = locations[departure_station_id][:name]
+                Carrier.parse(carrier_id, carriers)
+              end
 
-            last_journey_leg_id = journey_leg_ids.last
-            arrival_station_id = legs[last_journey_leg_id][:arrivalLocation]
-            result[:arrival_station] = locations[arrival_station_id][:name]
+            segment[:products] =
+              journey_node[:legs].map do |leg_id|
+                transport_mode_id = legs[leg_id][:transportMode]
 
-            departure_at = journey_data[:departAt].to_datetime
-            arrival_at = journey_data[:arriveAt].to_datetime
+                TransportMode.parse(transport_mode_id, transport_modes)
+              end
 
-            result[:departure_at] = departure_at
-            result[:arrival_at] = arrival_at
-            result[:duration_in_minutes] = ((arrival_at - departure_at) * 24 * 60).to_i
-
-            result[:service_agencies] = []
-            result[:products] = []
-
-            journey_leg_ids.map do |leg_id|
-              carrier_id = legs[leg_id][:carrier]
-              result[:service_agencies] << carriers[carrier_id][:name]
-              transport_mode_id = legs[leg_id][:transportMode]
-              result[:products] << transport_modes[transport_mode_id][:mode]
-            end
-
-            journey_section_ids = journey_data[:sections]
+            journey_section_ids = journey_node[:sections]
 
             cheapest_section_fares =
               journey_section_ids.map do |section_id|
-                cheapest_section_alternative_id = sections[section_id][:alternatives].first
-                cheapest_section_alternative = alternatives[cheapest_section_alternative_id]
-
-                price = cheapest_section_alternative[:fullPrice][:amount]
-                currency = cheapest_section_alternative[:fullPrice][:currencyCode]
-                fare_id = cheapest_section_alternative[:fares].first
-                fare = fares[fare_id]
-                fare_leg = fare[:fareLegs].first
-
-                cheapest_section_fare = {
-                  price_in_cents: price_in_cents(price, currency),
-                  currency: currency,
-                  name: fare_leg[:travelClass][:name],
-                  comfort_class: fare_leg[:comfort][:name]
-                }
+                Fare.parse(fares, sections[section_id], alternatives)
               end
 
             cheapest_price = cheapest_section_fares.sum { |fare| fare[:price_in_cents] }
-            result[:fares] = [cheapest_section_fares.last.merge(price_in_cents: cheapest_price)]
 
-            result
+            segment[:fares] = [
+              cheapest_section_fares.last.merge(
+                price_in_cents: cheapest_price
+              )
+            ]
+
+            segment
           end
         end
 
@@ -166,15 +141,6 @@ module ComThetrainline
 
         def transport_modes
           @transport_modes ||= response_body[:transportModes]
-        end
-
-        def price_in_cents(price, currency)
-          case currency
-          when 'USD'
-            price * 100
-          else
-            0
-          end.to_i
         end
     end
   end
