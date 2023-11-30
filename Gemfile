@@ -47,5 +47,7 @@ group :test do
   gem "webmock"
 end
 
+gem "eu_central_bank"
 gem "httparty", "~> 0.21.0"
+gem "money"
 gem "oj"

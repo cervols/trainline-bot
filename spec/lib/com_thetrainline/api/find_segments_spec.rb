@@ -26,7 +26,7 @@ RSpec.describe ComThetrainline::Api::FindSegments do
               time: departure_at,
               type: 'departAfter'
             }
-          },
+          }
         ],
         type: 'single'
       }.to_json
@@ -56,18 +56,9 @@ RSpec.describe ComThetrainline::Api::FindSegments do
     context 'when there are journeys in response' do
       let(:departure_at) { '2023-12-01T07:01:00+00:00'.to_datetime }
       let(:arrival_at) { '2023-12-01T10:21:00+01:00'.to_datetime }
-
-      let(:trainline_response) do
-        File.read(Rails.root.join('spec', 'support', 'files', 'journeys.json'))
-      end
-
-      it 'returns array with segments data' do
-        stub_request(:post, 'https://www.thetrainline.com/api/journey-search/')
-          .to_return(status: 200, body: trainline_response, headers: {})
-
-        expect(segments).to be_a(Array)
-        expect(segments.count).to eq(15)
-        expect(segments.first).to eq(
+      let(:base_price) { 16_177 }
+      let(:expected_segment_data) do
+        {
           departure_station: 'London St-Pancras',
           departure_at: departure_at,
           arrival_station: 'Paris Gare du Nord',
@@ -78,13 +69,55 @@ RSpec.describe ComThetrainline::Api::FindSegments do
           products: ['train'],
           fares: [
             {
-              price_in_cents: 16177,
+              price_in_cents: expected_price,
               currency: 'USD',
               name: 'Standard',
               comfort_class: 'Standard'
             }
           ]
-        )
+        }
+      end
+
+      before do
+        allow_any_instance_of(EuCentralBank).to receive(:update_rates)
+      end
+
+      context 'and prices are in the default currency' do
+        let(:expected_price) { base_price }
+        let(:trainline_response) do
+          File.read(Rails.root.join('spec', 'support', 'files', 'journeys_with_prices_in_usd.json'))
+        end
+
+        it 'returns array with segments data' do
+          stub_request(:post, 'https://www.thetrainline.com/api/journey-search/')
+            .to_return(status: 200, body: trainline_response, headers: {})
+
+          expect(segments).to be_a(Array)
+          expect(segments.count).to eq(15)
+          expect(segments.first).to eq(expected_segment_data)
+        end
+      end
+
+      context 'and prices are not in the default currency (EUR)' do
+        let(:eur_to_usd_rate) { 1.1 }
+        let(:expected_price) { (base_price * eur_to_usd_rate).round }
+        let(:trainline_response) do
+          File.read(Rails.root.join('spec', 'support', 'files', 'journeys_with_prices_in_eur.json'))
+        end
+
+        before do
+          allow_any_instance_of(EuCentralBank).to receive(:get_rate)
+            .and_return(eur_to_usd_rate)
+        end
+
+        it 'returns segments data with prices converted to default currency' do
+          stub_request(:post, 'https://www.thetrainline.com/api/journey-search/')
+            .to_return(status: 200, body: trainline_response, headers: {})
+
+          expect(segments).to be_a(Array)
+          expect(segments.count).to eq(1)
+          expect(segments.first).to eq(expected_segment_data)
+        end
       end
     end
   end
